@@ -6,8 +6,6 @@ from .serialaizers import CollegeSerialaizers
 from .models import CollegeList
 
 
-
-
 class CollegeAPIViews(generics.ListAPIView):
     queryset = CollegeList.objects.all()
     serializer_class = CollegeSerialaizers
