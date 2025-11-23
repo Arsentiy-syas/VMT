@@ -28,7 +28,8 @@ class CollegeViewset(viewsets.ViewSet):
                 "message": "College created successfully",
                 "data": serializer.data
             }, status=201)
-        return Response({
-            "status": "error",
-            "errors": serializer.errors
-        }, status=400)
+        else:
+            return Response({
+                "status": "error",
+                "errors": serializer.errors
+            }, status=400)
