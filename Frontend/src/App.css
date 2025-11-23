@@ -580,3 +580,465 @@ body {
     font-size: 0.9rem;
   }
 }
+
+.colleges-section {
+  background: #f8f9fa;
+  padding: 80px 0;
+}
+
+.colleges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  margin-top: 40px;
+}
+
+.college-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3b82f6;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.college-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.college-card h3 {
+  color: #1f2937;
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.college-card p {
+  color: #6b7280;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.college-id {
+  display: inline-block;
+  background: #e5e7eb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 1.2rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+/* Стили для третьей кнопки */
+.btn-tertiary {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 5px;
+}
+
+.btn-tertiary:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Адаптивность для кнопок в hero section */
+.hero-actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .hero-actions .btn {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* Стили для кнопки в навигации */
+.nav-link-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-link-btn:hover {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+/* Стили для кнопки в hero секции */
+.btn-tertiary {
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 5px;
+}
+
+.btn-tertiary:hover {
+  background: #7c3aed;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* Стили для основного раздела с колледжами */
+.colleges-main-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 60px 0;
+}
+
+.colleges-main-section .colleges-section {
+  background: transparent;
+  padding: 0;
+}
+
+.colleges-main-section .college-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-left: 4px solid #8b5cf6;
+}
+
+.colleges-main-section .section-title {
+  color: white;
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 2.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Анимация появления */
+.colleges-main-section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Кнопка закрытия */
+.close-colleges-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-colleges-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+/* Стили для навигации */
+.nav-link-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-link-btn:hover {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+/* Стили для кнопки в hero секции */
+.btn-tertiary {
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 5px;
+}
+
+.btn-tertiary:hover {
+  background: #7c3aed;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* Стили для страницы колледжей */
+.colleges-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.colleges-page main {
+  flex: 1;
+}
+
+.page-title {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  color: #1f2937;
+}
+
+.page-description {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 40px;
+  font-size: 1.1rem;
+}
+
+/* src/App.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Header */
+.header {
+  background: #2c3e50;
+  color: white;
+  padding: 1rem 0;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.nav ul {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+}
+
+.nav-link-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.nav-link-btn:hover {
+  color: #3498db;
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.hero-description {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-tertiary {
+  background: #9b59b6;
+  color: white;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Sections */
+.section {
+  padding: 4rem 0;
+}
+
+/* Colleges Section */
+.colleges-section {
+  padding: 2rem 0;
+}
+
+.colleges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.college-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+}
+
+.college-card h3 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.college-address {
+  color: #7f8c8d;
+  margin-bottom: 1rem;
+}
+
+.college-id {
+  background: #ecf0f1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #34495e;
+}
+
+/* Loading and Error States */
+.loading, .error, .no-data {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.loading {
+  color: #7f8c8d;
+}
+
+.error {
+  color: #e74c3c;
+  background: #fdf2f2;
+  border-radius: 8px;
+}
+
+.no-data {
+  color: #95a5a6;
+  font-style: italic;
+}
+
+/* Footer */
+.footer {
+  background: #34495e;
+  color: white;
+  text-align: center;
+  padding: 2rem 0;
+  margin-top: 2rem;
+}

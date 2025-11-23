@@ -1,11 +1,34 @@
 from django.shortcuts import render
+from django.forms.models import model_to_dict
+from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
 from .serialaizers import CollegeSerialaizers
 from .models import CollegeList
 
 
-class CollegeAPIViews(generics.ListAPIView):
-    queryset = CollegeList.objects.all()
-    serializer_class = CollegeSerialaizers
+class CollegeViewset(viewsets.ViewSet):
+    def list(self, request):
+        college = CollegeList.objects.all()
+        serialaizer = CollegeSerialaizers(college, many=True)
+        return Response({
+            'status': 'success',
+            'data': serialaizer.data,
+            'count': len(serialaizer.data),})
+    
+    def create(self, request):
+        serializer = CollegeSerialaizers(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "status": "success",
+                "message": "College created successfully",
+                "data": serializer.data
+            }, status=201)
+        return Response({
+            "status": "error",
+            "errors": serializer.errors
+        }, status=400)
