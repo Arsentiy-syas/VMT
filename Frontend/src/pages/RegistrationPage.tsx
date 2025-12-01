@@ -1,4 +1,4 @@
-// src/pages/RegistrationPage.tsx
+// src/pages/RegistrationPage.tsx - ОБНОВЛЕННЫЙ
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -20,6 +20,7 @@ const RegistrationPage: React.FC = () => {
   });
   const [errors, setErrors] = useState<Partial<RegistrationForm>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -76,9 +77,11 @@ const RegistrationPage: React.FC = () => {
 
     setIsLoading(true);
     setErrors({});
+    setSuccessMessage('');
 
     try {
-      const response = await axios.post('http://localhost:8001/registration/', {
+      // Отправляем запрос на регистрацию
+      const response = await axios.post('http://localhost:8001/api/v2/registration/', {
         username: formData.username,
         email: formData.email,
         password: formData.password,
@@ -86,12 +89,25 @@ const RegistrationPage: React.FC = () => {
       });
 
       if (response.status === 201) {
-        // Сохраняем информацию о успешной регистрации в sessionStorage
+        // Показываем сообщение об успехе
+        setSuccessMessage(`Регистрация прошла успешно! Добро пожаловать, ${formData.username}!`);
+        
+        // Сбрасываем форму
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          password2: ''
+        });
+        
+        // Сохраняем информацию о регистрации для показа уведомления на главной
         sessionStorage.setItem('registrationSuccess', 'true');
         sessionStorage.setItem('registeredUsername', formData.username);
         
-        // Редирект на главную страницу
-        navigate('/');
+        // Через 3 секунды перенаправляем на страницу входа
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
       }
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -100,21 +116,29 @@ const RegistrationPage: React.FC = () => {
         const serverErrors = error.response.data;
         const formattedErrors: Partial<RegistrationForm> = {};
         
-        Object.keys(serverErrors).forEach(key => {
-          if (key in formData) {
-            formattedErrors[key as keyof RegistrationForm] = Array.isArray(serverErrors[key]) 
-              ? serverErrors[key][0] 
-              : serverErrors[key];
-          }
-        });
+        // Обрабатываем ошибки сервера
+        if (typeof serverErrors === 'object') {
+          Object.keys(serverErrors).forEach(key => {
+            if (key in formData) {
+              formattedErrors[key as keyof RegistrationForm] = Array.isArray(serverErrors[key]) 
+                ? serverErrors[key][0] 
+                : serverErrors[key];
+            }
+          });
+        }
         
         setErrors(formattedErrors);
         
-        if (!Object.keys(formattedErrors).length) {
+        // Если ошибки не связаны с конкретными полями
+        if (!Object.keys(formattedErrors).length && serverErrors.message) {
+          setErrors({ username: serverErrors.message });
+        } else if (!Object.keys(formattedErrors).length) {
           setErrors({ username: 'Произошла ошибка при регистрации' });
         }
+      } else if (error.message.includes('Network Error')) {
+        setErrors({ username: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
       } else {
-        setErrors({ username: 'Ошибка соединения с сервером' });
+        setErrors({ username: 'Неизвестная ошибка при регистрации' });
       }
     } finally {
       setIsLoading(false);
@@ -162,7 +186,10 @@ const RegistrationPage: React.FC = () => {
       cursor: 'pointer',
       padding: '8px 0',
       fontSize: '14px',
-      transition: 'color 0.3s ease'
+      transition: 'color 0.3s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px'
     } as React.CSSProperties,
     
     title: {
@@ -203,7 +230,8 @@ const RegistrationPage: React.FC = () => {
       borderRadius: '8px',
       fontSize: '16px',
       transition: 'all 0.3s ease',
-      background: 'white'
+      background: 'white',
+      outline: 'none'
     } as React.CSSProperties,
     
     inputError: {
@@ -220,7 +248,8 @@ const RegistrationPage: React.FC = () => {
     errorText: {
       color: '#ef4444',
       fontSize: '14px',
-      fontWeight: '500'
+      fontWeight: '500',
+      marginTop: '4px'
     } as React.CSSProperties,
     
     submitButton: {
@@ -254,6 +283,26 @@ const RegistrationPage: React.FC = () => {
       animation: 'spin 1s linear infinite'
     } as React.CSSProperties,
     
+    successMessage: {
+      background: '#d1fae5',
+      border: '1px solid #a7f3d0',
+      color: '#065f46',
+      padding: '12px 16px',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      fontSize: '14px',
+      fontWeight: '500',
+      textAlign: 'center' as const,
+      animation: 'fadeIn 0.3s ease-out'
+    } as React.CSSProperties,
+    
+    redirectMessage: {
+      color: '#6b7280',
+      fontSize: '12px',
+      textAlign: 'center' as const,
+      marginTop: '8px'
+    } as React.CSSProperties,
+    
     footer: {
       textAlign: 'center' as const,
       marginTop: '24px',
@@ -273,7 +322,19 @@ const RegistrationPage: React.FC = () => {
       cursor: 'pointer',
       textDecoration: 'underline',
       fontSize: 'inherit',
-      padding: '0'
+      padding: '0',
+      fontWeight: '600'
+    } as React.CSSProperties,
+    
+    serverError: {
+      background: '#fef2f2',
+      border: '1px solid #fee2e2',
+      color: '#dc2626',
+      padding: '12px 16px',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      fontSize: '14px',
+      fontWeight: '500'
     } as React.CSSProperties
   };
 
@@ -286,119 +347,141 @@ const RegistrationPage: React.FC = () => {
               style={styles.backButton}
               onClick={() => navigate('/')}
             >
-              ← Назад
+              ← На главную
             </button>
             <h1 style={styles.title}>Регистрация</h1>
             <p style={styles.subtitle}>Создайте аккаунт для доступа ко всем возможностям</p>
           </div>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.formGroup}>
-              <label htmlFor="username" style={styles.label}>Имя пользователя *</label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.username ? styles.inputError : {}),
-                  ...(isLoading ? styles.inputDisabled : {})
-                }}
-                placeholder="Введите имя пользователя"
-                disabled={isLoading}
-              />
-              {errors.username && <span style={styles.errorText}>{errors.username}</span>}
-            </div>
+          {successMessage && (
+            <>
+              <div style={styles.successMessage}>
+                {successMessage}
+              </div>
+              <div style={styles.redirectMessage}>
+                Через 3 секунды вы будете перенаправлены на страницу входа...
+              </div>
+            </>
+          )}
 
-            <div style={styles.formGroup}>
-              <label htmlFor="email" style={styles.label}>Email адрес *</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.email ? styles.inputError : {}),
-                  ...(isLoading ? styles.inputDisabled : {})
-                }}
-                placeholder="Введите ваш email"
-                disabled={isLoading}
-              />
-              {errors.email && <span style={styles.errorText}>{errors.email}</span>}
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="password" style={styles.label}>Пароль *</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.password ? styles.inputError : {}),
-                  ...(isLoading ? styles.inputDisabled : {})
-                }}
-                placeholder="Введите пароль"
-                disabled={isLoading}
-              />
-              {errors.password && <span style={styles.errorText}>{errors.password}</span>}
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="password2" style={styles.label}>Подтверждение пароля *</label>
-              <input
-                type="password"
-                id="password2"
-                name="password2"
-                value={formData.password2}
-                onChange={handleChange}
-                style={{
-                  ...styles.input,
-                  ...(errors.password2 ? styles.inputError : {}),
-                  ...(isLoading ? styles.inputDisabled : {})
-                }}
-                placeholder="Повторите пароль"
-                disabled={isLoading}
-              />
-              {errors.password2 && <span style={styles.errorText}>{errors.password2}</span>}
-            </div>
-
-            <button 
-              type="submit" 
-              style={{
-                ...styles.submitButton,
-                ...(isLoading ? styles.submitButtonDisabled : {})
-              }}
-              disabled={isLoading}
-              onMouseOver={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <div style={styles.spinner}></div>
-                  Регистрация...
-                </>
-              ) : (
-                'Зарегистрироваться'
+          {!successMessage && (
+            <form onSubmit={handleSubmit} style={styles.form}>
+              {/* Общая ошибка сервера */}
+              {errors.username && errors.username.includes('сервер') && (
+                <div style={styles.serverError}>
+                  {errors.username}
+                </div>
               )}
-            </button>
-          </form>
+
+              <div style={styles.formGroup}>
+                <label htmlFor="username" style={styles.label}>Имя пользователя *</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  style={{
+                    ...styles.input,
+                    ...(errors.username && !errors.username.includes('сервер') ? styles.inputError : {}),
+                    ...(isLoading ? styles.inputDisabled : {})
+                  }}
+                  placeholder="Введите имя пользователя"
+                  disabled={isLoading}
+                />
+                {errors.username && !errors.username.includes('сервер') && (
+                  <span style={styles.errorText}>{errors.username}</span>
+                )}
+              </div>
+
+              <div style={styles.formGroup}>
+                <label htmlFor="email" style={styles.label}>Email адрес *</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  style={{
+                    ...styles.input,
+                    ...(errors.email ? styles.inputError : {}),
+                    ...(isLoading ? styles.inputDisabled : {})
+                  }}
+                  placeholder="Введите ваш email"
+                  disabled={isLoading}
+                />
+                {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+              </div>
+
+              <div style={styles.formGroup}>
+                <label htmlFor="password" style={styles.label}>Пароль *</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  style={{
+                    ...styles.input,
+                    ...(errors.password ? styles.inputError : {}),
+                    ...(isLoading ? styles.inputDisabled : {})
+                  }}
+                  placeholder="Введите пароль"
+                  disabled={isLoading}
+                />
+                {errors.password && <span style={styles.errorText}>{errors.password}</span>}
+              </div>
+
+              <div style={styles.formGroup}>
+                <label htmlFor="password2" style={styles.label}>Подтверждение пароля *</label>
+                <input
+                  type="password"
+                  id="password2"
+                  name="password2"
+                  value={formData.password2}
+                  onChange={handleChange}
+                  style={{
+                    ...styles.input,
+                    ...(errors.password2 ? styles.inputError : {}),
+                    ...(isLoading ? styles.inputDisabled : {})
+                  }}
+                  placeholder="Повторите пароль"
+                  disabled={isLoading}
+                />
+                {errors.password2 && <span style={styles.errorText}>{errors.password2}</span>}
+              </div>
+
+              <button 
+                type="submit" 
+                style={{
+                  ...styles.submitButton,
+                  ...(isLoading ? styles.submitButtonDisabled : {})
+                }}
+                disabled={isLoading || successMessage.length > 0}
+                onMouseOver={(e) => {
+                  if (!isLoading && !successMessage) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isLoading && !successMessage) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
+                }}
+              >
+                {isLoading ? (
+                  <>
+                    <div style={styles.spinner}></div>
+                    Регистрация...
+                  </>
+                ) : (
+                  successMessage ? 'Зарегистрировано!' : 'Зарегистрироваться'
+                )}
+              </button>
+            </form>
+          )}
 
           <div style={styles.footer}>
             <p style={styles.footerText}>
@@ -406,6 +489,7 @@ const RegistrationPage: React.FC = () => {
               <button 
                 style={styles.linkButton}
                 onClick={() => navigate('/login')}
+                disabled={isLoading}
               >
                 Войти
               </button>
@@ -421,9 +505,29 @@ const RegistrationPage: React.FC = () => {
           100% { transform: rotate(360deg); }
         }
         
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        input:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
         @media (max-width: 640px) {
           .registration-card {
             padding: 24px;
+          }
+          
+          h1 {
+            font-size: 1.75rem;
           }
         }
       `}</style>
