@@ -2,6 +2,9 @@ from django.shortcuts import render
 from django.contrib.auth import logout
 from django.contrib.auth import authenticate, login
 from django.forms.models import model_to_dict
+from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework import generics
@@ -13,6 +16,7 @@ from rest_framework import status
 from .serialaizers import RegistrationSerialaizer, ProfileUserSerialaizer
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegistrationViewset(viewsets.ViewSet):
     def create(self, request):
         serialaizer = RegistrationSerialaizer(data=request.data)
@@ -23,6 +27,7 @@ class RegistrationViewset(viewsets.ViewSet):
         return Response(serialaizer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ProfileUser(viewsets.ViewSet):
     permission_class=[IsAuthenticated]
 
@@ -54,6 +59,15 @@ def user_logout(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_csrf_token(request):
+    return Response({
+        'csrfToken': get_token(request)
+    })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
@@ -71,6 +85,7 @@ class LoginViewSet(viewsets.ViewSet):
 
         if user is not None:
             login(request, user)
+            request.session.save()
         
             return Response({
                 'status': 'success',

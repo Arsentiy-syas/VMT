@@ -1,7 +1,6 @@
 // src/pages/RegistrationPage.tsx - ОБНОВЛЕННЫЙ
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 interface RegistrationForm {
   username: string;
@@ -80,65 +79,81 @@ const RegistrationPage: React.FC = () => {
     setSuccessMessage('');
 
     try {
-      // Отправляем запрос на регистрацию
-      const response = await axios.post('http://localhost:8001/api/v2/registration/', {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        password2: formData.password2
+      // 1. Регистрация
+      const registrationResponse = await fetch('http://localhost:8001/api/v2/registration/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          password2: formData.password2
+        }),
       });
 
-      if (response.status === 201) {
-        // Показываем сообщение об успехе
-        setSuccessMessage(`Регистрация прошла успешно! Добро пожаловать, ${formData.username}!`);
+      if (registrationResponse.status === 201) {
+        const registrationData = await registrationResponse.json();
+        console.log('✅ Регистрация успешна:', registrationData);
         
-        // Сбрасываем форму
-        setFormData({
-          username: '',
-          email: '',
-          password: '',
-          password2: ''
-        });
+        // 2. Автоматический вход после регистрации
+        setSuccessMessage(`Добро пожаловать, ${formData.username}! Выполняется вход...`);
         
-        // Сохраняем информацию о регистрации для показа уведомления на главной
-        sessionStorage.setItem('registrationSuccess', 'true');
-        sessionStorage.setItem('registeredUsername', formData.username);
-        
-        // Через 3 секунды перенаправляем на страницу входа
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+        try {
+          const loginResponse = await fetch('http://localhost:8001/api/v2/login/', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: formData.username,
+              password: formData.password
+            }),
+          });
+
+          if (loginResponse.status === 200) {
+            const loginData = await loginResponse.json();
+            console.log('✅ Автоматический вход успешен:', loginData);
+            
+            // Сохраняем информацию о регистрации
+            sessionStorage.setItem('registrationSuccess', 'true');
+            sessionStorage.setItem('registeredUsername', formData.username);
+            
+            // Немедленно перенаправляем на главную
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1000);
+          } else {
+            // Если вход не удался, но регистрация прошла
+            console.log('⚠️ Автоматический вход не удался, но регистрация прошла');
+            setSuccessMessage(`Регистрация успешна! Войдите в систему.`);
+            
+            setTimeout(() => {
+              navigate('/login');
+            }, 2000);
+          }
+        } catch (loginError) {
+          console.log('⚠️ Ошибка автоматического входа:', loginError);
+          setSuccessMessage(`Регистрация успешна! Войдите в систему.`);
+          
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      } else {
+        const errorData = await registrationResponse.json();
+        throw new Error(errorData.message || 'Ошибка регистрации');
       }
     } catch (error: any) {
       console.error('Registration error:', error);
       
-      if (error.response?.data) {
-        const serverErrors = error.response.data;
-        const formattedErrors: Partial<RegistrationForm> = {};
-        
-        // Обрабатываем ошибки сервера
-        if (typeof serverErrors === 'object') {
-          Object.keys(serverErrors).forEach(key => {
-            if (key in formData) {
-              formattedErrors[key as keyof RegistrationForm] = Array.isArray(serverErrors[key]) 
-                ? serverErrors[key][0] 
-                : serverErrors[key];
-            }
-          });
-        }
-        
-        setErrors(formattedErrors);
-        
-        // Если ошибки не связаны с конкретными полями
-        if (!Object.keys(formattedErrors).length && serverErrors.message) {
-          setErrors({ username: serverErrors.message });
-        } else if (!Object.keys(formattedErrors).length) {
-          setErrors({ username: 'Произошла ошибка при регистрации' });
-        }
-      } else if (error.message.includes('Network Error')) {
+      if (error.message.includes('Network Error')) {
         setErrors({ username: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
       } else {
-        setErrors({ username: 'Неизвестная ошибка при регистрации' });
+        setErrors({ username: error.message || 'Неизвестная ошибка при регистрации' });
       }
     } finally {
       setIsLoading(false);
@@ -359,7 +374,9 @@ const RegistrationPage: React.FC = () => {
                 {successMessage}
               </div>
               <div style={styles.redirectMessage}>
-                Через 3 секунды вы будете перенаправлены на страницу входа...
+                {successMessage.includes('вход') 
+                  ? 'Через 1 секунду вы будете перенаправлены на главную страницу...'
+                  : 'Через 2 секунды вы будете перенаправлены на страницу входа...'}
               </div>
             </>
           )}
@@ -387,7 +404,7 @@ const RegistrationPage: React.FC = () => {
                     ...(isLoading ? styles.inputDisabled : {})
                   }}
                   placeholder="Введите имя пользователя"
-                  disabled={isLoading}
+                  disabled={isLoading || successMessage.length > 0}
                 />
                 {errors.username && !errors.username.includes('сервер') && (
                   <span style={styles.errorText}>{errors.username}</span>
@@ -408,7 +425,7 @@ const RegistrationPage: React.FC = () => {
                     ...(isLoading ? styles.inputDisabled : {})
                   }}
                   placeholder="Введите ваш email"
-                  disabled={isLoading}
+                  disabled={isLoading || successMessage.length > 0}
                 />
                 {errors.email && <span style={styles.errorText}>{errors.email}</span>}
               </div>
@@ -427,7 +444,7 @@ const RegistrationPage: React.FC = () => {
                     ...(isLoading ? styles.inputDisabled : {})
                   }}
                   placeholder="Введите пароль"
-                  disabled={isLoading}
+                  disabled={isLoading || successMessage.length > 0}
                 />
                 {errors.password && <span style={styles.errorText}>{errors.password}</span>}
               </div>
@@ -446,7 +463,7 @@ const RegistrationPage: React.FC = () => {
                     ...(isLoading ? styles.inputDisabled : {})
                   }}
                   placeholder="Повторите пароль"
-                  disabled={isLoading}
+                  disabled={isLoading || successMessage.length > 0}
                 />
                 {errors.password2 && <span style={styles.errorText}>{errors.password2}</span>}
               </div>
@@ -489,7 +506,7 @@ const RegistrationPage: React.FC = () => {
               <button 
                 style={styles.linkButton}
                 onClick={() => navigate('/login')}
-                disabled={isLoading}
+                disabled={isLoading || successMessage.length > 0}
               >
                 Войти
               </button>

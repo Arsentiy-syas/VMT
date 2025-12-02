@@ -17,7 +17,6 @@ function App() {
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/api/v1/collegelist" element={<CollegesPage />} />
         </Routes>
       </div>
     </Router>

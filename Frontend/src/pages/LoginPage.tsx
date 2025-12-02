@@ -31,10 +31,6 @@ const LoginPage: React.FC = () => {
     console.log('🔐 Попытка входа:', { username: formData.username });
 
     try {
-      // Очищаем старые флаги принудительного выхода
-      localStorage.removeItem('force_logout');
-      
-      // 1. Пытаемся войти
       const response = await fetch('http://localhost:8001/api/v2/login/', {
         method: 'POST',
         credentials: 'include',
@@ -55,7 +51,7 @@ const LoginPage: React.FC = () => {
       if (response.ok && data.status === 'success') {
         console.log('✅ Успешный вход:', data);
         
-        // 2. После успешного входа проверяем профиль
+        // Проверяем профиль после входа
         console.log('🔄 Проверка профиля после входа...');
         
         const profileResponse = await fetch('http://localhost:8001/api/v2/profile/profile/', {
@@ -66,14 +62,10 @@ const LoginPage: React.FC = () => {
           },
         });
 
-        console.log('📊 Статус проверки профиля:', profileResponse.status);
-        
         if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          console.log('✅ Профиль получен:', profileData);
+          console.log('✅ Профиль получен');
           
-          // Успешный вход - перенаправляем на главную
-          // Используем полную перезагрузку для сброса состояния
+          // Перенаправляем на главную
           window.location.href = '/';
         } else {
           console.log('❌ Ошибка получения профиля');

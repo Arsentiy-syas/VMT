@@ -15,14 +15,18 @@ const Home: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Простая проверка авторизации
+  // Проверка авторизации
   const checkAuthStatus = async () => {
     try {
       console.log('🔐 Проверка авторизации...');
       
-      // Добавляем timestamp для предотвращения кэширования
-      const timestamp = Date.now();
-      const response = await fetch(`http://localhost:8001/api/v2/profile/profile/?_=${timestamp}`, {
+      // Проверяем флаг успешной регистрации
+      const registrationSuccess = sessionStorage.getItem('registrationSuccess');
+      if (registrationSuccess === 'true') {
+        console.log('🔄 Проверка авторизации после регистрации...');
+      }
+      
+      const response = await fetch(`http://localhost:8001/api/v2/profile/profile/`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -41,6 +45,12 @@ const Home: React.FC = () => {
           console.log('✅ Пользователь авторизован:', data.data.username);
           setIsAuthenticated(true);
           setUserData(data.data);
+          
+          // Убираем флаг успешной регистрации
+          if (registrationSuccess === 'true') {
+            sessionStorage.removeItem('registrationSuccess');
+            sessionStorage.removeItem('registeredUsername');
+          }
         } else {
           console.log('❌ Нет данных пользователя');
           setIsAuthenticated(false);
@@ -60,7 +70,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // Простой выход
+  // Выход
   const handleLogout = async () => {
     console.log('👋 Выход...');
     

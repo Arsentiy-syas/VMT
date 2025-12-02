@@ -59,6 +59,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8001",
     ]
 
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -77,6 +86,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-csrf-token',
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -88,6 +98,24 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False
   
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8001",
+    "http://127.0.0.1:3000",
+]
+
+CSRF_COOKIE_HTTPONLY = False
+
+CSRF_COOKIE_SECURE = False
+
+CSRF_COOKIE_SAMESITE = 'Lax' 
+
+CSRF_USE_SESSIONS = False 
 
 ROOT_URLCONF = 'users.urls'
 
