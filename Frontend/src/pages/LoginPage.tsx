@@ -1,6 +1,21 @@
-// src/pages/LoginPage.tsx - ИСПРАВЛЕННЫЙ
-import React, { useState } from 'react';
+// src/pages/LoginPage.tsx - ИСПРАВЛЕННЫЙ (TypeScript)
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+interface LoginErrors {
+  username?: string;
+  password?: string;
+  general?: string;
+}
+
+interface ApiResponse {
+  status?: string;
+  message?: string;
+  errors?: Record<string, string[] | string>;
+  username?: string[] | string;
+  password?: string[] | string;
+  detail?: string;
+}
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -8,8 +23,35 @@ const LoginPage: React.FC = () => {
     username: '',
     password: ''
   });
-  const [errors, setErrors] = useState<{username?: string; password?: string; general?: string}>({});
+  const [errors, setErrors] = useState<LoginErrors>({});
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [csrfToken, setCsrfToken] = useState('');
+
+  // Получаем CSRF токен при загрузке страницы
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        console.log('🔑 Получение CSRF токена...');
+        const response = await fetch('http://localhost:8001/api/v2/csrf/', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCsrfToken(data.csrfToken || '');
+          console.log('✅ CSRF токен получен');
+        } else {
+          console.log('⚠️ Не удалось получить CSRF токен');
+        }
+      } catch (error) {
+        console.error('❌ Ошибка получения CSRF токена:', error);
+      }
+    };
+
+    fetchCsrfToken();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -18,7 +60,7 @@ const LoginPage: React.FC = () => {
       [name]: value
     }));
     
-    if (errors[name as keyof typeof errors]) {
+    if (errors[name as keyof LoginErrors]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
@@ -27,15 +69,37 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setErrors({});
+    setSuccessMessage('');
 
     console.log('🔐 Попытка входа:', { username: formData.username });
 
     try {
+      // Если CSRF токена нет, пробуем получить его снова
+      let currentCsrfToken = csrfToken;
+      if (!currentCsrfToken) {
+        console.log('🔄 Получаем CSRF токен заново...');
+        try {
+          const csrfResponse = await fetch('http://localhost:8001/api/v2/csrf/', {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (csrfResponse.ok) {
+            const csrfData = await csrfResponse.json();
+            currentCsrfToken = csrfData.csrfToken || '';
+            setCsrfToken(currentCsrfToken);
+          }
+        } catch (csrfError) {
+          console.error('❌ Ошибка получения CSRF:', csrfError);
+        }
+      }
+
       const response = await fetch('http://localhost:8001/api/v2/login/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRFToken': currentCsrfToken || '',
         },
         body: JSON.stringify({
           username: formData.username.trim(),
@@ -45,39 +109,62 @@ const LoginPage: React.FC = () => {
 
       console.log('📊 Статус ответа логина:', response.status);
 
-      const data = await response.json();
-      console.log('📦 Данные ответа логина:', data);
+      const responseText = await response.text();
+      console.log('📦 Текст ответа:', responseText);
+      
+      let data: ApiResponse;
+      try {
+        data = JSON.parse(responseText) as ApiResponse;
+      } catch {
+        data = { message: 'Невалидный JSON ответ' };
+      }
 
       if (response.ok && data.status === 'success') {
         console.log('✅ Успешный вход:', data);
         
-        // Проверяем профиль после входа
-        console.log('🔄 Проверка профиля после входа...');
+        setSuccessMessage(data.message || 'Вход выполнен!');
         
-        const profileResponse = await fetch('http://localhost:8001/api/v2/profile/profile/', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
-
-        if (profileResponse.ok) {
-          console.log('✅ Профиль получен');
-          
-          // Перенаправляем на главную
+        // Редирект на главную с обновлением состояния
+        setTimeout(() => {
           window.location.href = '/';
-        } else {
-          console.log('❌ Ошибка получения профиля');
-          setErrors({ general: 'Ошибка загрузки профиля после входа' });
-        }
+        }, 1000);
       } else {
         console.log('❌ Ошибка входа:', data);
-        setErrors({ general: data.message || 'Неверные учетные данные' });
+        
+        // Детальная обработка ошибок
+        if (data.username) {
+          const usernameError = Array.isArray(data.username) ? data.username[0] : data.username;
+          setErrors({ username: usernameError });
+        } else if (data.password) {
+          const passwordError = Array.isArray(data.password) ? data.password[0] : data.password;
+          setErrors({ password: passwordError });
+        } else if (data.errors) {
+          // Обработка ошибок валидации
+          const errorMessages: string[] = [];
+          Object.keys(data.errors).forEach(key => {
+            const value = data.errors![key];
+            if (Array.isArray(value)) {
+              errorMessages.push(`${key}: ${value[0]}`);
+            } else {
+              errorMessages.push(`${key}: ${value}`);
+            }
+          });
+          setErrors({ general: errorMessages.join(', ') });
+        } else if (data.message) {
+          setErrors({ general: data.message });
+        } else if (data.detail) {
+          setErrors({ general: data.detail });
+        } else {
+          setErrors({ general: 'Неверные учетные данные' });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('🚨 Ошибка входа:', error);
-      setErrors({ general: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
+      if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+        setErrors({ general: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
+      } else {
+        setErrors({ general: 'Ошибка соединения с сервером' });
+      }
     } finally {
       setLoading(false);
     }
@@ -94,59 +181,70 @@ const LoginPage: React.FC = () => {
           <p>Введите ваши учетные данные</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {errors.general && (
-            <div className="error-message general-error">
-              {errors.general}
+        {successMessage && (
+          <div className="success-message">
+            {successMessage}
+            <div className="redirect-message">
+              Через 1 секунду вы будете перенаправлены на главную страницу...
             </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="username">Имя пользователя</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              placeholder="Введите имя пользователя"
-              disabled={loading}
-              className={errors.username ? 'error' : ''}
-              autoComplete="username"
-            />
-            {errors.username && <span className="field-error">{errors.username}</span>}
           </div>
+        )}
 
-          <div className="form-group">
-            <label htmlFor="password">Пароль</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Введите пароль"
-              disabled={loading}
-              className={errors.password ? 'error' : ''}
-              autoComplete="current-password"
-            />
-            {errors.password && <span className="field-error">{errors.password}</span>}
-          </div>
+        {!successMessage && (
+          <form onSubmit={handleSubmit} className="login-form">
+            {errors.general && (
+              <div className="error-message general-error">
+                {errors.general}
+              </div>
+            )}
 
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={loading}
-          >
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
+            <div className="form-group">
+              <label htmlFor="username">Имя пользователя</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                placeholder="Введите имя пользователя"
+                disabled={loading || successMessage.length > 0}
+                className={errors.username ? 'error' : ''}
+                autoComplete="username"
+              />
+              {errors.username && <span className="field-error">{errors.username}</span>}
+            </div>
 
-          <div className="register-link">
-            Нет аккаунта? <span onClick={() => navigate('/register')}>Зарегистрироваться</span>
-          </div>
-        </form>
+            <div className="form-group">
+              <label htmlFor="password">Пароль</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Введите пароль"
+                disabled={loading || successMessage.length > 0}
+                className={errors.password ? 'error' : ''}
+                autoComplete="current-password"
+              />
+              {errors.password && <span className="field-error">{errors.password}</span>}
+            </div>
+
+            <button 
+              type="submit" 
+              className="submit-btn"
+              disabled={loading || successMessage.length > 0}
+            >
+              {loading ? 'Вход...' : 'Войти'}
+            </button>
+
+            <div className="register-link">
+              Нет аккаунта? <span onClick={() => navigate('/register')}>Зарегистрироваться</span>
+            </div>
+          </form>
+        )}
       </div>
 
       <style>{`
@@ -263,6 +361,22 @@ const LoginPage: React.FC = () => {
           text-align: center;
         }
         
+        .success-message {
+          background: #d1fae5;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        
+        .redirect-message {
+          color: #047857;
+          font-size: 12px;
+          margin-top: 8px;
+        }
+        
         .submit-btn {
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           color: white;
@@ -307,6 +421,17 @@ const LoginPage: React.FC = () => {
         @media (max-width: 480px) {
           .login-container {
             padding: 30px 20px;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
       `}</style>

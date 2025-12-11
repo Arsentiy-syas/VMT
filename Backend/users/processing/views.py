@@ -38,26 +38,37 @@ class ProfileUser(viewsets.ViewSet):
         return Response({'status': 'success', 'data': serializer.data})
     
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def user_logout(request):
-    if request.user.is_authenticated:
-        logout(request)
-        
-        request.session.flush()
-        
-        request.session.create()
+@method_decorator(csrf_exempt, name='dispatch')
+class LogoutViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
-        return Response({
-            'status': 'success',
-            'message': 'Успешный выход из аккаунта',
-        }, status=status.HTTP_200_OK)
-    else:
-        return Response({
-            'status': 'error',
-            'message': 'Пользователь не зарегистрирован',
-        }, status=status.HTTP_400_BAD_REQUEST)
-
+    def create(self, request):
+        try:
+            if hasattr(request, 'session'):
+                request.session.flush()
+                request.session.delete()
+            
+            logout(request)
+            
+            response = Response({
+                'status': 'success',
+                'message': 'Успешный выход из аккаунта',
+            }, status=status.HTTP_200_OK)
+            
+            response.delete_cookie('sessionid')
+            response.delete_cookie('csrftoken')
+            
+            response['Authorization'] = ''
+            
+            return response
+            
+        except Exception as e:
+            print(f"Ошибка при выходе: {e}")
+            return Response({
+                'status': 'error',
+                'message': 'Ошибка при выходе'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

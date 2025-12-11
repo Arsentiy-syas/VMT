@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-zw$dz9nff&9o=7+j63#v*uxrsz0i8m^9s!s3fat77ssb!j8853
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -56,7 +56,6 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:8001",
     ]
 
 CORS_ALLOW_METHODS = [
@@ -68,13 +67,8 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
-
-CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -86,8 +80,18 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    'x-csrf-token',
 ]
+
+# CSRF настройки
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8001",
+    "http://localhost:8000",
+]
+
+CSRF_COOKIE_HTTPONLY = False  # Для доступа через JS
+
+CSRF_USE_SESSIONS = False
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
@@ -99,6 +103,12 @@ SESSION_COOKIE_SECURE = False
   
 SESSION_COOKIE_SAMESITE = 'Lax'
 
+SESSION_COOKIE_DOMAIN = 'localhost'  # Общий домен
+
+SESSION_COOKIE_PATH = '/'
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
@@ -106,7 +116,7 @@ AUTHENTICATION_BACKENDS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8001",
-    "http://127.0.0.1:3000",
+    "http://localhost:8000",
 ]
 
 CSRF_COOKIE_HTTPONLY = False

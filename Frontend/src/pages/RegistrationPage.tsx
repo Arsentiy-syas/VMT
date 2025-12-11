@@ -1,5 +1,5 @@
-// src/pages/RegistrationPage.tsx - ОБНОВЛЕННЫЙ
-import React, { useState } from 'react';
+// src/pages/RegistrationPage.tsx - ИСПРАВЛЕННЫЙ (TypeScript)
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface RegistrationForm {
@@ -7,6 +7,22 @@ interface RegistrationForm {
   email: string;
   password: string;
   password2: string;
+}
+
+interface RegistrationErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+  password2?: string;
+  general?: string;
+}
+
+interface ApiResponse {
+  status?: string;
+  message?: string;
+  errors?: Record<string, string[] | string>;
+  detail?: string;
+  [key: string]: any; // Для остальных полей
 }
 
 const RegistrationPage: React.FC = () => {
@@ -17,9 +33,38 @@ const RegistrationPage: React.FC = () => {
     password: '',
     password2: ''
   });
-  const [errors, setErrors] = useState<Partial<RegistrationForm>>({});
+  const [errors, setErrors] = useState<RegistrationErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [csrfToken, setCsrfToken] = useState<string>('');
+
+  // Получаем CSRF токен при загрузке страницы
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        console.log('🔑 Получение CSRF токена...');
+        const response = await fetch('http://localhost:8001/api/v2/csrf/', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        console.log('📊 CSRF статус:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📦 CSRF данные:', data);
+          setCsrfToken(data.csrfToken || '');
+          console.log('✅ CSRF токен получен');
+        } else {
+          console.log('⚠️ Не удалось получить CSRF токен, статус:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка получения CSRF токена:', error);
+      }
+    };
+
+    fetchCsrfToken();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -27,17 +72,17 @@ const RegistrationPage: React.FC = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
-    if (errors[name as keyof RegistrationForm]) {
+    
+    if (errors[name as keyof RegistrationErrors]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: undefined
       }));
     }
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<RegistrationForm> = {};
+    const newErrors: RegistrationErrors = {};
 
     if (!formData.username.trim()) {
       newErrors.username = 'Имя пользователя обязательно';
@@ -79,81 +124,156 @@ const RegistrationPage: React.FC = () => {
     setSuccessMessage('');
 
     try {
-      // 1. Регистрация
-      const registrationResponse = await fetch('http://localhost:8001/api/v2/registration/', {
+      console.log('📝 Отправка данных регистрации...', {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password_length: formData.password.length,
+        password2_length: formData.password2.length
+      });
+
+      // Если CSRF токена нет, пробуем получить его снова
+      let currentCsrfToken = csrfToken;
+      if (!currentCsrfToken) {
+        console.log('🔄 Получаем CSRF токен заново...');
+        try {
+          const csrfResponse = await fetch('http://localhost:8001/api/v2/csrf/', {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (csrfResponse.ok) {
+            const csrfData = await csrfResponse.json();
+            currentCsrfToken = csrfData.csrfToken || '';
+            setCsrfToken(currentCsrfToken);
+          }
+        } catch (csrfError) {
+          console.error('❌ Ошибка получения CSRF:', csrfError);
+        }
+      }
+
+      console.log('🔑 Используемый CSRF токен:', currentCsrfToken ? 'Есть' : 'Нет');
+
+      const response = await fetch('http://localhost:8001/api/v2/registration/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRFToken': currentCsrfToken || '',
         },
         body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
+          username: formData.username.trim(),
+          email: formData.email.trim(),
           password: formData.password,
           password2: formData.password2
         }),
       });
 
-      if (registrationResponse.status === 201) {
-        const registrationData = await registrationResponse.json();
-        console.log('✅ Регистрация успешна:', registrationData);
+      console.log('📊 Статус регистрации:', response.status);
+      
+      const responseText = await response.text();
+      console.log('📦 Текст ответа:', responseText);
+      
+      let responseData: ApiResponse;
+      try {
+        responseData = JSON.parse(responseText) as ApiResponse;
+      } catch {
+        responseData = { detail: 'Невалидный JSON ответ' };
+      }
+
+      if (response.ok) {
+        console.log('✅ Регистрация успешна:', responseData);
         
-        // 2. Автоматический вход после регистрации
-        setSuccessMessage(`Добро пожаловать, ${formData.username}! Выполняется вход...`);
+        setSuccessMessage(responseData.message || 'Регистрация успешна!');
         
+        // Автоматический вход после регистрации
+        console.log('🔄 Автоматический вход после регистрации...');
         try {
           const loginResponse = await fetch('http://localhost:8001/api/v2/login/', {
             method: 'POST',
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
+              'X-CSRFToken': currentCsrfToken || '',
             },
             body: JSON.stringify({
-              username: formData.username,
+              username: formData.username.trim(),
               password: formData.password
             }),
           });
 
-          if (loginResponse.status === 200) {
+          if (loginResponse.ok) {
             const loginData = await loginResponse.json();
-            console.log('✅ Автоматический вход успешен:', loginData);
-            
-            // Сохраняем информацию о регистрации
-            sessionStorage.setItem('registrationSuccess', 'true');
-            sessionStorage.setItem('registeredUsername', formData.username);
-            
-            // Немедленно перенаправляем на главную
+            console.log('✅ Автоматический вход выполнен:', loginData);
             setTimeout(() => {
               window.location.href = '/';
-            }, 1000);
+            }, 1500);
           } else {
-            // Если вход не удался, но регистрация прошла
-            console.log('⚠️ Автоматический вход не удался, но регистрация прошла');
-            setSuccessMessage(`Регистрация успешна! Войдите в систему.`);
-            
+            const loginError = await loginResponse.text();
+            console.log('⚠️ Автоматический вход не удался:', loginError);
+            setSuccessMessage(prev => prev + ' Войдите в систему.');
             setTimeout(() => {
               navigate('/login');
             }, 2000);
           }
         } catch (loginError) {
-          console.log('⚠️ Ошибка автоматического входа:', loginError);
-          setSuccessMessage(`Регистрация успешна! Войдите в систему.`);
-          
+          console.error('❌ Ошибка автоматического входа:', loginError);
+          setSuccessMessage(prev => prev + ' Войдите в систему.');
           setTimeout(() => {
             navigate('/login');
           }, 2000);
         }
       } else {
-        const errorData = await registrationResponse.json();
-        throw new Error(errorData.message || 'Ошибка регистрации');
+        console.log('❌ Ошибка регистрации:', responseData);
+        
+        if (response.status === 400) {
+          if (responseData.errors) {
+            // Ошибки валидации от Django
+            const formattedErrors: RegistrationErrors = {};
+            
+            Object.keys(responseData.errors).forEach(key => {
+              if (key in formData) {
+                const errorValue = responseData.errors![key];
+                formattedErrors[key as keyof RegistrationForm] = 
+                  Array.isArray(errorValue) ? errorValue[0] : String(errorValue);
+              }
+            });
+            
+            setErrors(formattedErrors);
+            
+            if (Object.keys(formattedErrors).length === 0) {
+              setErrors({ general: 'Ошибка валидации данных' });
+            }
+          } else if (responseData.detail) {
+            setErrors({ general: responseData.detail });
+          } else {
+            // Парсим стандартные ошибки Django
+            const errorMessages: string[] = [];
+            Object.keys(responseData).forEach(key => {
+              const value = responseData[key];
+              if (Array.isArray(value)) {
+                errorMessages.push(`${key}: ${value[0]}`);
+              } else {
+                errorMessages.push(`${key}: ${value}`);
+              }
+            });
+            
+            if (errorMessages.length > 0) {
+              setErrors({ general: errorMessages.join(', ') });
+            } else {
+              setErrors({ general: 'Ошибка регистрации' });
+            }
+          }
+        } else {
+          setErrors({ general: `Ошибка сервера: ${response.status}` });
+        }
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('🚨 Ошибка запроса:', error);
       
-      if (error.message.includes('Network Error')) {
-        setErrors({ username: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
+      if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+        setErrors({ general: 'Ошибка соединения с сервером. Проверьте, запущен ли бэкенд на порту 8001' });
       } else {
-        setErrors({ username: error.message || 'Неизвестная ошибка при регистрации' });
+        setErrors({ general: 'Неизвестная ошибка при регистрации' });
       }
     } finally {
       setIsLoading(false);
@@ -267,6 +387,16 @@ const RegistrationPage: React.FC = () => {
       marginTop: '4px'
     } as React.CSSProperties,
     
+    generalError: {
+      background: '#fef2f2',
+      border: '1px solid #fee2e2',
+      color: '#dc2626',
+      padding: '12px 16px',
+      borderRadius: '8px',
+      fontSize: '14px',
+      textAlign: 'center' as const,
+    } as React.CSSProperties,
+    
     submitButton: {
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
       color: 'white',
@@ -339,17 +469,6 @@ const RegistrationPage: React.FC = () => {
       fontSize: 'inherit',
       padding: '0',
       fontWeight: '600'
-    } as React.CSSProperties,
-    
-    serverError: {
-      background: '#fef2f2',
-      border: '1px solid #fee2e2',
-      color: '#dc2626',
-      padding: '12px 16px',
-      borderRadius: '8px',
-      marginBottom: '20px',
-      fontSize: '14px',
-      fontWeight: '500'
     } as React.CSSProperties
   };
 
@@ -375,7 +494,7 @@ const RegistrationPage: React.FC = () => {
               </div>
               <div style={styles.redirectMessage}>
                 {successMessage.includes('вход') 
-                  ? 'Через 1 секунду вы будете перенаправлены на главную страницу...'
+                  ? 'Через 1.5 секунды вы будете перенаправлены на главную страницу...'
                   : 'Через 2 секунды вы будете перенаправлены на страницу входа...'}
               </div>
             </>
@@ -383,10 +502,9 @@ const RegistrationPage: React.FC = () => {
 
           {!successMessage && (
             <form onSubmit={handleSubmit} style={styles.form}>
-              {/* Общая ошибка сервера */}
-              {errors.username && errors.username.includes('сервер') && (
-                <div style={styles.serverError}>
-                  {errors.username}
+              {errors.general && (
+                <div style={styles.generalError}>
+                  {errors.general}
                 </div>
               )}
 
@@ -400,13 +518,13 @@ const RegistrationPage: React.FC = () => {
                   onChange={handleChange}
                   style={{
                     ...styles.input,
-                    ...(errors.username && !errors.username.includes('сервер') ? styles.inputError : {}),
+                    ...(errors.username ? styles.inputError : {}),
                     ...(isLoading ? styles.inputDisabled : {})
                   }}
                   placeholder="Введите имя пользователя"
                   disabled={isLoading || successMessage.length > 0}
                 />
-                {errors.username && !errors.username.includes('сервер') && (
+                {errors.username && (
                   <span style={styles.errorText}>{errors.username}</span>
                 )}
               </div>
@@ -515,7 +633,6 @@ const RegistrationPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add CSS for spinner animation */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -536,16 +653,6 @@ const RegistrationPage: React.FC = () => {
         input:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        @media (max-width: 640px) {
-          .registration-card {
-            padding: 24px;
-          }
-          
-          h1 {
-            font-size: 1.75rem;
-          }
         }
       `}</style>
     </div>

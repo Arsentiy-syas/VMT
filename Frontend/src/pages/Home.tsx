@@ -1,4 +1,4 @@
-// src/pages/Home.tsx - ИСПРАВЛЕННЫЙ
+// src/pages/Home.tsx - С ИСПРАВЛЕННЫМ LOGOUT И КНОПКОЙ ВИДЕО
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,55 +14,97 @@ const Home: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [csrfToken, setCsrfToken] = useState<string>('');
 
-  // Проверка авторизации
-  const checkAuthStatus = async () => {
-    try {
-      console.log('🔐 Проверка авторизации...');
-      
-      // Проверяем флаг успешной регистрации
-      const registrationSuccess = sessionStorage.getItem('registrationSuccess');
-      if (registrationSuccess === 'true') {
-        console.log('🔄 Проверка авторизации после регистрации...');
+  // ==================== ПОЛУЧЕНИЕ CSRF ТОКЕНА ====================
+  const getCsrfToken = () => {
+    const cookies = document.cookie.split('; ');
+    for (const cookie of cookies) {
+      if (cookie.startsWith('csrftoken=')) {
+        return cookie.split('=')[1];
       }
+    }
+    return '';
+  };
+
+  // ==================== ФУНКЦИЯ ВЫХОДА ====================
+  const handleLogout = async () => {
+    console.log('🚪 Выход из аккаунта');
+    
+    try {
+      // Получаем CSRF токен
+      const csrfToken = getCsrfToken();
+      console.log('🔑 CSRF токен:', csrfToken ? 'Есть' : 'Нет');
       
-      const response = await fetch(`http://localhost:8001/api/v2/profile/profile/`, {
-        method: 'GET',
+      const response = await fetch('http://localhost:8001/api/v2/logout/', {
+        method: 'POST',
         credentials: 'include',
         headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({}), // Пустое тело, но нужно для POST
+      });
+      
+      console.log('📊 Статус выхода:', response.status);
+      
+      if (response.ok) {
+        console.log('✅ Выход успешен');
+      }
+      
+      // Очистка локального состояния
+      setIsAuthenticated(false);
+      setUserData(null);
+      
+      // Простая очистка хранилища
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Обновляем страницу
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('❌ Ошибка выхода:', error);
+      // Все равно перенаправляем
+      window.location.href = '/';
+    }
+  };
+
+  // ==================== ПРОВЕРКА АВТОРИЗАЦИИ ====================
+  const checkAuthStatus = async () => {
+    console.log('🔐 Проверка авторизации...');
+    
+    try {
+      const response = await fetch('http://localhost:8001/api/v2/profile/profile/', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache',
         },
       });
 
-      console.log('📊 Статус проверки:', response.status);
+      console.log('📊 Статус:', response.status);
 
       if (response.status === 200) {
         const data = await response.json();
-        console.log('📦 Данные профиля:', data);
+        console.log('📦 Ответ:', data);
         
-        if (data && data.status === 'success' && data.data && data.data.username) {
-          console.log('✅ Пользователь авторизован:', data.data.username);
+        if (data && data.data && data.data.username) {
           setIsAuthenticated(true);
           setUserData(data.data);
-          
-          // Убираем флаг успешной регистрации
-          if (registrationSuccess === 'true') {
-            sessionStorage.removeItem('registrationSuccess');
-            sessionStorage.removeItem('registeredUsername');
-          }
+          console.log('✅ Авторизован:', data.data.username);
         } else {
           console.log('❌ Нет данных пользователя');
           setIsAuthenticated(false);
           setUserData(null);
         }
       } else {
-        console.log('❌ Не авторизован, статус:', response.status);
+        console.log('❌ Не авторизован');
         setIsAuthenticated(false);
         setUserData(null);
       }
     } catch (error) {
-      console.error('🚨 Ошибка проверки:', error);
+      console.error('🚨 Ошибка:', error);
       setIsAuthenticated(false);
       setUserData(null);
     } finally {
@@ -70,44 +112,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // Выход
-  const handleLogout = async () => {
-    console.log('👋 Выход...');
-    
-    // 1. Сбрасываем состояние
-    setIsAuthenticated(false);
-    setUserData(null);
-    
-    // 2. Очищаем хранилища
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    // 3. Очищаем cookies
-    document.cookie.split(";").forEach(cookie => {
-      const name = cookie.split("=")[0].trim();
-      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    });
-    
-    // 4. Пытаемся отправить запрос на сервер
-    try {
-      await fetch('http://localhost:8001/api/logout/', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    } catch (error) {
-      console.log('⚠️ Ошибка отправки запроса:', error);
-    }
-    
-    // 5. Сообщение и перезагрузка
-    alert('Вы успешно вышли из системы!');
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 100);
-  };
-
+  // ==================== USE EFFECT ====================
   useEffect(() => {
     // Проверка регистрации
     const registrationSuccess = sessionStorage.getItem('registrationSuccess');
@@ -117,6 +122,7 @@ const Home: React.FC = () => {
       setShowSuccessNotification(true);
       setRegisteredUsername(username);
       
+      // Удаляем
       sessionStorage.removeItem('registrationSuccess');
       sessionStorage.removeItem('registeredUsername');
       
@@ -129,6 +135,11 @@ const Home: React.FC = () => {
 
     // Проверка авторизации
     checkAuthStatus();
+    
+    // Получаем CSRF токен при загрузке
+    const token = getCsrfToken();
+    setCsrfToken(token);
+    console.log('🔄 CSRF токен установлен:', token ? 'Есть' : 'Нет');
   }, []);
 
   const closeNotification = () => {
@@ -202,6 +213,12 @@ const Home: React.FC = () => {
                     Профиль
                   </button>
                   <button 
+                    style={styles.btnVideo}
+                    onClick={() => navigate('/video-upload')}
+                  >
+                    📤 Видео
+                  </button>
+                  <button 
                     style={styles.btnLogout}
                     onClick={handleLogout}
                   >
@@ -255,7 +272,6 @@ const Home: React.FC = () => {
         </div>
       </main>
 
-      {/* Встроенные стили для анимации */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -266,7 +282,7 @@ const Home: React.FC = () => {
   );
 };
 
-// Объект со стилями
+// ==================== СТИЛИ ====================
 const styles = {
   page: {
     minHeight: '100vh',
@@ -275,7 +291,7 @@ const styles = {
   
   loadingContainer: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
@@ -293,7 +309,7 @@ const styles = {
   } as React.CSSProperties,
   
   notification: {
-    position: 'fixed',
+    position: 'fixed' as const,
     top: '20px',
     right: '20px',
     backgroundColor: '#10b981',
@@ -376,7 +392,7 @@ const styles = {
   
   logoText: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
   } as React.CSSProperties,
   
   logoTitle: {
@@ -414,7 +430,7 @@ const styles = {
   userMenu: {
     display: 'flex',
     alignItems: 'center',
-    gap: '15px',
+    gap: '12px',
   } as React.CSSProperties,
   
   welcomeText: {
@@ -429,6 +445,16 @@ const styles = {
   
   btnProfile: {
     background: '#007bff',
+    color: 'white',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 500,
+  } as React.CSSProperties,
+  
+  btnVideo: {
+    background: '#FF9800',
     color: 'white',
     border: 'none',
     padding: '8px 16px',
@@ -475,7 +501,7 @@ const styles = {
   
   main: {
     padding: '80px 0',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: 'white',
     minHeight: 'calc(100vh - 70px)',

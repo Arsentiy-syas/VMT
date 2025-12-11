@@ -5,6 +5,8 @@ import CollegesPage from './pages/CollegesPage';
 import RegistrationPage from './pages/RegistrationPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
+import VideoUploadPage from './pages/VideoUploadPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -17,6 +19,19 @@ function App() {
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/video-upload" element={<VideoUploadPage />} />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/video-upload" element={
+            <ProtectedRoute>
+              <VideoUploadPage />
+            </ProtectedRoute>
+          } />
         </Routes>
       </div>
     </Router>

@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-b$%n7d4b7ul!9v8ehg%h*g-+u%y9ql-jvw3y0k%@-ej9lq=f24
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -58,9 +58,80 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     ]
 
+# Добавьте эти настройки:
+CORS_ALLOW_CREDENTIALS = True  
+# Важно для CSRF и сессий!
+CORS_ALLOW_ALL_ORIGINS = True # Для разработки разрешить все
+
+
+# Разрешенные методы
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Разрешенные заголовки
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Разрешить cookies
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+# Настройки CSRF
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+CSRF_COOKIE_HTTPONLY = False  # Для доступа из JavaScript
+
+CSRF_COOKIE_SECURE = False  # Для разработки (True для HTTPS)
+
+CSRF_USE_SESSIONS = False
+
+CSRF_COOKIE_NAME = 'csrftoken'
+
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+SESSION_COOKIE_DOMAIN = 'localhost'  # Общий домен
+
+SESSION_COOKIE_PATH = '/'
+
+SESSION_COOKIE_AGE = 1209600
+
+SESSION_COOKIE_HTTPONLY = True
+
+SESSION_COOKIE_SECURE = False  # Для разработ
+
+SESSION_SAVE_EVERY_REQUEST = True
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 
@@ -134,6 +205,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_ROOT = BASE_DIR.parent / 'media'
+
+MEDIA_URL = '/media/'
+
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+os.makedirs(MEDIA_ROOT / 'video', exist_ok=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
