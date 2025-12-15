@@ -46,8 +46,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -95,9 +95,13 @@ CSRF_USE_SESSIONS = False
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
 SESSION_COOKIE_NAME = 'sessionid'
 
 SESSION_COOKIE_HTTPONLY = True
+
+SESSION_COOKIE_AGE = 1209600
 
 SESSION_COOKIE_SECURE = False
   
@@ -108,6 +112,13 @@ SESSION_COOKIE_DOMAIN = 'localhost'  # Общий домен
 SESSION_COOKIE_PATH = '/'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'shared-sessions',
+    }
+}
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -153,7 +164,7 @@ WSGI_APPLICATION = 'users.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'users_drf',
+        'NAME': 'postgres',
         'USER': 'postgres',
         'PASSWORD': 'Ab362467',
         'HOST': 'localhost',

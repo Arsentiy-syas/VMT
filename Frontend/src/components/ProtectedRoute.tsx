@@ -1,5 +1,4 @@
-// src/components/ProtectedRoute.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 interface ProtectedRouteProps {
@@ -7,13 +6,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-  const checkAuth = async () => {
-    console.log('🛡️ ProtectedRoute: проверка авторизации...');
-    
+  const checkAuth = async (): Promise<boolean> => {
     try {
       const response = await fetch('http://localhost:8001/api/v2/profile/profile/', {
         method: 'GET',
@@ -22,34 +18,36 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           'Accept': 'application/json',
         },
       });
-      
-      console.log('🛡️ Статус проверки:', response.status);
-      
+
       if (response.status === 200) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
+        const data = await response.json();
+        if (data && data.data) {
+          return true;
+        }
       }
+      return false;
     } catch (error) {
-      console.error('🛡️ Ошибка проверки:', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsChecking(false);
+      console.error('Ошибка проверки авторизации:', error);
+      return false;
     }
   };
 
   useEffect(() => {
-    checkAuth();
-  }, [location.pathname]);
+    const verifyAuth = async () => {
+      const isAuth = await checkAuth();
+      setIsAuthenticated(isAuth);
+    };
 
-  if (isChecking) {
+    verifyAuth();
+  }, [location]);
+
+  if (isAuthenticated === null) {
     return (
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        background: '#f5f5f5'
       }}>
         <div style={{
           width: '50px',
@@ -57,15 +55,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           border: '5px solid #f3f3f3',
           borderTop: '5px solid #3498db',
           borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
+          animation: 'spin 1s linear infinite',
         }}></div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    console.log('🛡️ Пользователь не авторизован, редирект на /login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

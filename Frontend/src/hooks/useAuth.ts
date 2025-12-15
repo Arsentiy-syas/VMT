@@ -1,81 +1,96 @@
-// src/hooks/useAuth.ts
-import { useState, useEffect, useCallback } from 'react';
-import { getApiUrl } from '../config/api';
+// src/hooks/useAuth.tsx (упрощенная версия)
+import { useState, useEffect } from 'react';
 
 interface UserData {
   username: string;
   email: string;
 }
 
-export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface UseAuthReturn {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: UserData | null;
+  checkAuth: () => Promise<boolean>;
+  logout: () => Promise<void>;
+}
 
-  const checkAuth = useCallback(async () => {
-    console.log('🔐 Проверка авторизации (порт 8001)...');
-    
+export const useAuth = (): UseAuthReturn => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserData | null>(null);
+
+  const checkAuth = async (): Promise<boolean> => {
     try {
-      const response = await fetch(getApiUrl('PROFILE'), {
+      const response = await fetch('http://localhost:8001/api/v2/profile/profile/', {
         method: 'GET',
-        credentials: 'include', // Важно!
+        credentials: 'include',
         headers: {
           'Accept': 'application/json',
         },
       });
-      
-      console.log('📊 Статус:', response.status);
-      
+
       if (response.status === 200) {
         const data = await response.json();
-        setIsAuthenticated(true);
-        setUserData(data.data);
-        console.log('✅ Авторизован:', data.data?.username);
-      } else {
-        setIsAuthenticated(false);
-        setUserData(null);
-        console.log('❌ Не авторизован');
+        if (data && data.data) {
+          setIsAuthenticated(true);
+          setUser(data.data);
+          return true;
+        }
       }
-    } catch (error) {
-      console.error('🚨 Ошибка:', error);
+      
       setIsAuthenticated(false);
-      setUserData(null);
-    } finally {
-      setIsLoading(false);
+      setUser(null);
+      return false;
+    } catch (error) {
+      console.error('Ошибка проверки авторизации:', error);
+      setIsAuthenticated(false);
+      setUser(null);
+      return false;
     }
-  }, []);
+  };
 
-  const logout = useCallback(async () => {
+  const logout = async (): Promise<void> => {
     try {
-      await fetch(getApiUrl('LOGOUT'), {
+      const cookies = document.cookie.split('; ');
+      let csrfToken = '';
+      for (const cookie of cookies) {
+        if (cookie.trim().startsWith('csrftoken=')) {
+          csrfToken = cookie.split('=')[1];
+          break;
+        }
+      }
+
+      await fetch('http://localhost:8001/api/v2/logout/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
         },
+        body: JSON.stringify({}),
       });
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
     } finally {
       setIsAuthenticated(false);
-      setUserData(null);
-      // Очищаем куки для обоих портов
-      document.cookie.split(';').forEach(cookie => {
-        const [name] = cookie.trim().split('=');
-        // Удаляем для localhost
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=localhost;`;
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      });
-      window.location.href = '/';
+      setUser(null);
+      localStorage.clear();
+      sessionStorage.clear();
     }
-  }, []);
+  };
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    const initAuth = async () => {
+      await checkAuth();
+      setIsLoading(false);
+    };
+    initAuth();
+  }, []);
 
   return {
     isAuthenticated,
-    userData,
     isLoading,
+    user,
     checkAuth,
     logout,
   };

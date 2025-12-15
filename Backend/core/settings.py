@@ -20,12 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b$%n7d4b7ul!9v8ehg%h*g-+u%y9ql-jvw3y0k%@-ej9lq=f24'
+SECRET_KEY = 'django-insecure-zw$dz9nff&9o=7+j63#v*uxrsz0i8m^9s!s3fat77ssb!j8853'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -45,8 +45,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -56,7 +56,9 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    ]
+    "http://localhost:8001",  # Добавляем порт сервера аутентификации
+    "http://127.0.0.1:8001",
+]
 
 # Добавьте эти настройки:
 CORS_ALLOW_CREDENTIALS = True  
@@ -85,15 +87,22 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+     'x-user-id',          
+    'x-username',          
+    'x-auth-token',        
+    'cookie',  
 ]
 
 # Разрешить cookies
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8001',
+    'http://127.0.0.1:8001',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
+
 
 # Настройки CSRF
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -104,13 +113,15 @@ CSRF_COOKIE_SECURE = False  # Для разработки (True для HTTPS)
 
 CSRF_USE_SESSIONS = False
 
+CSRF_COOKIE_DOMAIN = None
+
 CSRF_COOKIE_NAME = 'csrftoken'
 
 CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
 
 SESSION_COOKIE_SAMESITE = 'Lax'
 
-SESSION_COOKIE_DOMAIN = 'localhost'  # Общий домен
+SESSION_COOKIE_DOMAIN = None  # Общий домен
 
 SESSION_COOKIE_PATH = '/'
 
@@ -118,11 +129,20 @@ SESSION_COOKIE_AGE = 1209600
 
 SESSION_COOKIE_HTTPONLY = True
 
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
 SESSION_COOKIE_SECURE = False  # Для разработ
 
 SESSION_SAVE_EVERY_REQUEST = True
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'shared-sessions',
+    }
+}
 
 
 REST_FRAMEWORK = {

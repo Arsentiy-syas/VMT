@@ -17,7 +17,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/colleges" element={<CollegesPage />} />
           <Route path="/register" element={<RegistrationPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/video-upload" element={<VideoUploadPage />} />
 
