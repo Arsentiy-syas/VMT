@@ -68,14 +68,6 @@ class LogoutViewSet(viewsets.ViewSet):
                 'status': 'error',
                 'message': 'Ошибка при выходе'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_csrf_token(request):
-    return Response({
-        'csrfToken': get_token(request)
-    })
 
 
 @method_decorator(csrf_exempt, name='dispatch')

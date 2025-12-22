@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import RegistrationViewset, ProfileUser, LoginViewSet, get_csrf_token, LogoutViewSet
+from .views import RegistrationViewset, ProfileUser, LoginViewSet, LogoutViewSet
 
 
 router = DefaultRouter()
@@ -13,5 +13,4 @@ router.register(r'logout', LogoutViewSet, basename='logout')
 
 urlpatterns = [
     path('api/v2/', include(router.urls)),
-    path('api/v2/csrf/', get_csrf_token, name='get_csrf_token'),
 ]
